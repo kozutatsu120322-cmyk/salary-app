@@ -3,13 +3,33 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+// ↓ 追加するFirebase用のインポート
+import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-void main() {
+// main関数をクラウド対応に書き換え
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Firebaseの初期化（ここに先ほどのキーを貼り付けます）
+  await Firebase.initializeApp(
+    options: const FirebaseOptions(
+      apiKey: "AIzaSyCN8Ta-Muun-G2JwlkCIEtma--esPS14wU",
+      appId: "1:895394949465:web:37d0e7f765208b4c704448",
+      messagingSenderId: "895394949465",
+      projectId: "salary-app-6e7b8",
+      authDomain: "salary-app-6e7b8.firebaseapp.com",
+      storageBucket: "salary-app-6e7b8.firebasestorage.app",
+    ),
+  );
+
   runApp(const SalaryApp());
 }
 
+// （enum AppThemeColor など、ここから下のデータモデルはそのまま残します）
+
 enum AppThemeColor {
-  gold('ゴールド', Color(0xFFC5A059)),
+  gold('ゴールド', Color.fromARGB(255, 129, 95, 31)),
   navy('ネイビー', Color(0xFF1B365D)),
   emerald('エメラルド', Color(0xFF0F5257)),
   wine('ワインレッド', Color(0xFF722F37)),
@@ -118,45 +138,33 @@ class SalaryRecord {
   }
 }
 
-// ブラウザ/Web用ストレージ管理クラス
+// ブラウザ保存からクラウド（Firestore）保存に切り替えたStorageHelper
 class StorageHelper {
-  static const String _key = 'salary_records_data';
+  static final FirebaseFirestore _db = FirebaseFirestore.instance;
+  static const String _collection = 'salary_records';
 
-  // 全件読み込み
+  // 全件読み込み（クラウドから取得）
   static Future<List<SalaryRecord>> getAllRecords() async {
-    final prefs = await SharedPreferences.getInstance();
-    final String? jsonString = prefs.getString(_key);
-    if (jsonString == null) return [];
+    final snapshot = await _db.collection(_collection).get();
+    if (snapshot.docs.isEmpty) return [];
 
-    final List<dynamic> jsonList = jsonDecode(jsonString);
-    final records = jsonList.map((json) => SalaryRecord.fromMap(json)).toList();
+    final records = snapshot.docs.map((doc) {
+      final data = doc.data();
+      return SalaryRecord.fromMap(data);
+    }).toList();
+    
     records.sort((a, b) => a.yearMonthValue.compareTo(b.yearMonthValue));
     return records;
   }
 
-  // 保存・更新
+  // 保存・更新（クラウドへ送信）
   static Future<void> saveRecord(SalaryRecord record) async {
-    final records = await getAllRecords();
-    final index = records.indexWhere((r) => r.id == record.id);
-    if (index >= 0) {
-      records[index] = record;
-    } else {
-      records.add(record);
-    }
-    await _saveAll(records);
+    await _db.collection(_collection).doc(record.id).set(record.toMap());
   }
 
-  // 削除
+  // 削除（クラウドから削除）
   static Future<void> deleteRecord(String id) async {
-    final records = await getAllRecords();
-    records.removeWhere((r) => r.id == id);
-    await _saveAll(records);
-  }
-
-  static Future<void> _saveAll(List<SalaryRecord> records) async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonList = records.map((r) => r.toMap()).toList();
-    await prefs.setString(_key, jsonEncode(jsonList));
+    await _db.collection(_collection).doc(id).delete();
   }
 }
 
@@ -222,11 +230,19 @@ class _MainTabScreenState extends State<MainTabScreen> {
   }
 
   Future<void> _loadRecords() async {
-    final records = await StorageHelper.getAllRecords();
-    setState(() {
-      _records = records;
-      _isLoading = false;
-    });
+    try {
+      final records = await StorageHelper.getAllRecords();
+      setState(() {
+        _records = records;
+        _isLoading = false;
+      });
+    } catch (e) {
+      // エラーが起きたらコンソールに内容を表示して、くるくるを強制的に止める
+      print("🔥Firebaseエラー発生: $e");
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _addOrUpdateRecord(SalaryRecord record) async {
