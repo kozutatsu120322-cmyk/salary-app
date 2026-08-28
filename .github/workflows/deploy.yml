@@ -32,7 +32,7 @@ jobs:
 
       - name: Upload artifact
         # 直接Pagesに送るためのパッケージ化
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: ./build/web
 
