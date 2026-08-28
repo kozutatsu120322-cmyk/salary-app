@@ -1,0 +1,49 @@
+name: Flutter Web Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+# Pagesへの直接デプロイに必要な権限設定
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Web
+        # リポジトリ名に合わせて変更
+        run: flutter build web --base-href "/salary-app/"
+
+      - name: Upload artifact
+        # 直接Pagesに送るためのパッケージ化
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./build/web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        # ここで直接公開
+        uses: actions/deploy-pages@v4
