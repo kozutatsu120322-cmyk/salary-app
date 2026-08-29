@@ -296,20 +296,19 @@ class _MainTabScreenState extends State<MainTabScreen> {
     ];
 
     return Scaffold(
-      appBar: AppBar(
+appBar: AppBar(
         title: const Text('給与明細管理'),
         actions: [
-          // 追加：手動リロードボタン（連打防止版）
+          // 手動リロードボタン
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: '最新データに更新',
-            // _isLoadingがtrueの時はnull（無効化）にする
             onPressed: _isLoading ? null : () {
               setState(() => _isLoading = true);
               _loadRecords();
             },
           ),
-          ),
+          // テーマ変更ボタン
           PopupMenuButton<AppThemeColor>(
             icon: const Icon(Icons.palette),
             tooltip: 'テーマカラー変更',
@@ -329,8 +328,7 @@ class _MainTabScreenState extends State<MainTabScreen> {
           ),
         ],
       ),
-      body: pages[_currentIndex],
-      bottomNavigationBar: NavigationBar(
+      body: pages[_currentIndex], // ← この行はそのまま残ります      bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (idx) => setState(() => _currentIndex = idx),
         destinations: const [
