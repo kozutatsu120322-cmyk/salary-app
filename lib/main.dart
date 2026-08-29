@@ -231,17 +231,31 @@ class _MainTabScreenState extends State<MainTabScreen> {
 
   Future<void> _loadRecords() async {
     try {
-      final records = await StorageHelper.getAllRecords();
+      // 5秒経っても取得できない場合はタイムアウトさせる
+      final records = await StorageHelper.getAllRecords().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () => throw Exception('通信タイムアウト'),
+      );
+      
       setState(() {
         _records = records;
         _isLoading = false;
       });
     } catch (e) {
-      // エラーが起きたらコンソールに内容を表示して、くるくるを強制的に止める
       print("🔥Firebaseエラー発生: $e");
       setState(() {
         _isLoading = false;
       });
+      
+      // ついでに、画面下部にエラーを知らせるポップアップ（スナックバー）を出すと親切です
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('通信が不安定です。少し待ってから再試行してください'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     }
   }
 
@@ -285,15 +299,16 @@ class _MainTabScreenState extends State<MainTabScreen> {
       appBar: AppBar(
         title: const Text('給与明細管理'),
         actions: [
-          // ★ 追加：手動リロードボタン
+          // 追加：手動リロードボタン（連打防止版）
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: '最新データに更新',
-            onPressed: () {
-              // くるくる（ローディング）を表示してからデータを取りに行く
+            // _isLoadingがtrueの時はnull（無効化）にする
+            onPressed: _isLoading ? null : () {
               setState(() => _isLoading = true);
               _loadRecords();
             },
+          ),
           ),
           PopupMenuButton<AppThemeColor>(
             icon: const Icon(Icons.palette),
