@@ -295,8 +295,8 @@ class _MainTabScreenState extends State<MainTabScreen> {
       GraphScreen(records: _records),
     ];
 
-    return Scaffold(
-appBar: AppBar(
+return Scaffold(
+      appBar: AppBar(
         title: const Text('給与明細管理'),
         actions: [
           // 手動リロードボタン
@@ -328,7 +328,8 @@ appBar: AppBar(
           ),
         ],
       ),
-      body: pages[_currentIndex], // ← この行はそのまま残ります      bottomNavigationBar: NavigationBar(
+      body: pages[_currentIndex],
+      bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (idx) => setState(() => _currentIndex = idx),
         destinations: const [
@@ -337,8 +338,7 @@ appBar: AppBar(
           NavigationDestination(icon: Icon(Icons.show_chart), label: '推移グラフ'),
         ],
       ),
-    );
-  }
+    );  }
 }
 
 // 1. 明細一覧画面（年別アコーディオン対応）
