@@ -251,7 +251,15 @@ class _MainTabScreenState extends State<MainTabScreen> {
   }
 
   Future<void> _deleteRecord(String id) async {
+    // ① クラウドと通信する前に、まずは画面のリストから一瞬で消す（サクサク感）
+    setState(() {
+      _records.removeWhere((r) => r.id == id);
+    });
+
+    // ② 裏側でこっそりクラウド上のデータを削除する
     await StorageHelper.deleteRecord(id);
+
+    // ③ 念のため、最新状態を再取得しておく
     await _loadRecords();
   }
 
@@ -277,6 +285,16 @@ class _MainTabScreenState extends State<MainTabScreen> {
       appBar: AppBar(
         title: const Text('給与明細管理'),
         actions: [
+          // ★ 追加：手動リロードボタン
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: '最新データに更新',
+            onPressed: () {
+              // くるくる（ローディング）を表示してからデータを取りに行く
+              setState(() => _isLoading = true);
+              _loadRecords();
+            },
+          ),
           PopupMenuButton<AppThemeColor>(
             icon: const Icon(Icons.palette),
             tooltip: 'テーマカラー変更',
